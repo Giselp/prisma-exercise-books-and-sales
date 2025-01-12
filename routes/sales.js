@@ -11,6 +11,40 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/top", async (req, res) => {
+  try {
+    const sales = await prisma.Venta.findMany({
+      select: {
+        ISBN: true,
+        Cantidad: true
+      }
+    });
+    const bookPrices = await prisma.Libro.findMany({
+      select: {
+        ISBN: true,
+        Titulo: true,
+        Precio: true
+      }
+    });
+    const result = sales.map((sale) => {
+      const book = bookPrices.find((book) => book.ISBN === sale.ISBN)
+      if(!book) return null
+      const totalRevenue= sale.Cantidad * book.Precio
+      return {
+        ISBN: sale.ISBN,
+        Titulo: book.Titulo,
+        Ganancia: totalRevenue
+      }
+    })
+    const filteredResult = result
+      .filter((item) => item !== null)
+      .sort((x, y) => y.Ganancia - x.Ganancia);
+    return res.json(filteredResult[0]);
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -54,21 +88,6 @@ router.get("/date/:date", async (req, res) => {
   }
 });
 
-//Endpoint `/sales/top`: Extrae el libro con el mayor ingreso total generado
 
-/* router.get("/top", async (req, res) => {
-  try{
-    const topBook = prisma.Venta.findMany({
-
-
-      include: {
-        Libro: true
-      }
-    
-    
-    })
-  }
-})
- */
 
 module.exports = router;
